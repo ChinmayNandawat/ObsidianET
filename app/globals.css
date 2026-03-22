@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #00C805;
+  --color-background: #05070a;
+  --color-surface: #10131a;
+  --color-surface-container: #1d2026;
+  --color-surface-container-low: #0b0e14;
+  --color-surface-container-high: #272a31;
+  --color-on-background: #e1e2eb;
+  --color-tertiary: #c6c7d3;
+  --color-secondary-container: #00f1fe;
+
+  --font-headline: "Manrope", sans-serif;
+  --font-body: "Manrope", sans-serif;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+  @keyframes orb-glow {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.2); opacity: 0.9; }
+  }
+  @keyframes pulse-slow {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+  }
+
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-orb-glow: orb-glow 10s ease-in-out infinite;
+  --animate-pulse-slow: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-on-background antialiased overflow-x-hidden;
+  }
+}
+
+.glass-card {
+  background: rgba(29, 32, 38, 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-panel {
+  background: rgba(16, 19, 26, 0.6);
+  backdrop-filter: blur(20px);
+}
+
+.neon-glow {
+  box-shadow: 0 0 15px rgba(0, 200, 5, 0.2);
+}
+
+.btn-elastic {
+  transition: transform 0.4s cubic-bezier(0.68, -0.6, 0.32, 1.6);
+}
+.btn-elastic:hover {
+  transform: scale(1.05);
+}
+.btn-elastic:active {
+  transform: scale(0.95);
+}
+
+.text-gradient {
+  background: linear-gradient(to right, #fff, #888);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
