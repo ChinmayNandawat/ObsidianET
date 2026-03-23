@@ -1,31 +1,47 @@
-import { Message, Recommendation, UserProfile } from '../types';
-import { DUMMY_MESSAGES, DUMMY_RECOMMENDATIONS, DUMMY_PROFILE } from './dummyData';
+import { PersonalizationPayload } from '../types';
 
-export async function analyzeUserMessage(message: string): Promise<string> {
-  // Simulate AI thinking delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  return `I have analyzed your request: "${message}". Based on the current ET market flux, I recommend exploring our high-yield obsidian pools.`;
+const SESSION_STORAGE_KEY = 'obsidian-et-session-id';
+
+function getStoredSessionId() {
+  if (typeof window === 'undefined') return undefined;
+  return window.localStorage.getItem(SESSION_STORAGE_KEY) || undefined;
 }
 
-export async function getAIResponse(messages: Message[]): Promise<Message> {
-  const lastMessage = messages[messages.length - 1];
-  const responseContent = await analyzeUserMessage(lastMessage.content);
-  
-  return {
-    id: Math.random().toString(36).substring(7),
-    role: 'assistant',
-    content: responseContent,
-    timestamp: new Date(),
-    status: 'complete'
-  };
+function storeSessionId(sessionId: string) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
 }
 
-export async function getRecommendations(profile: UserProfile): Promise<Recommendation[]> {
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  return DUMMY_RECOMMENDATIONS;
+export async function getSessionState(): Promise<PersonalizationPayload> {
+  const sessionId = getStoredSessionId();
+  const query = sessionId ? `?sessionId=${sessionId}` : '';
+  const response = await fetch(`/api/session${query}`, { cache: 'no-store' });
+  const data = await response.json();
+  storeSessionId(data.sessionId);
+  return data;
 }
 
-export async function getUserProfile(): Promise<UserProfile> {
-  return DUMMY_PROFILE;
+export async function sendChatMessage(message: string): Promise<PersonalizationPayload> {
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId: getStoredSessionId(), message }),
+  });
+  const data = await response.json();
+  storeSessionId(data.sessionId);
+  return data;
+}
+
+export async function getHubState() {
+  const sessionId = getStoredSessionId();
+  const query = sessionId ? `?sessionId=${sessionId}` : '';
+  const response = await fetch(`/api/hub${query}`, { cache: 'no-store' });
+  return response.json();
+}
+
+export async function getSimulationState() {
+  const sessionId = getStoredSessionId();
+  const query = sessionId ? `?sessionId=${sessionId}` : '';
+  const response = await fetch(`/api/simulation${query}`, { cache: 'no-store' });
+  return response.json();
 }
