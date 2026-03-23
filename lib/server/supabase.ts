@@ -1,12 +1,6 @@
-export interface SupabaseLikeClient {
-  from: (table: string) => {
-    upsert: (payload: Record<string, unknown>) => {
-      throwOnError: () => Promise<unknown>;
-    };
-  };
-}
+import { createClient } from '@supabase/supabase-js';
 
-export function getSupabaseServerClient(): SupabaseLikeClient | null {
+export function getSupabaseServerClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -14,11 +8,5 @@ export function getSupabaseServerClient(): SupabaseLikeClient | null {
     return null;
   }
 
-  return {
-    from: () => ({
-      upsert: (payload: Record<string, unknown>) => ({
-        throwOnError: async () => payload,
-      }),
-    }),
-  };
+  return createClient(supabaseUrl, supabaseAnonKey);
 }

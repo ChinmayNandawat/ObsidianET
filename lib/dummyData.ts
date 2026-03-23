@@ -8,16 +8,16 @@ import {
 } from '../types';
 
 export const PROFILING_QUESTIONS: ProfilingQuestion[] = [
-  { id: 'name', prompt: 'What should I call you while we build your ET intelligence profile?', category: 'identity' },
-  { id: 'experience', prompt: 'How many years have you been actively investing or trading?', category: 'experience' },
-  { id: 'risk', prompt: 'How would you describe your risk appetite: cautious, balanced, or aggressive?', category: 'risk' },
-  { id: 'goal', prompt: 'What is your primary financial objective over the next 12-24 months?', category: 'goal' },
-  { id: 'horizon', prompt: 'What is your preferred investment horizon: months, 1-3 years, or 5+ years?', category: 'goal' },
-  { id: 'focus', prompt: 'Which themes excite you most right now: equities, startups, global macro, AI, or wealth planning?', category: 'lifestyle' },
-  { id: 'income', prompt: 'Are you optimizing for cash flow, capital appreciation, or a blend of both?', category: 'goal' },
-  { id: 'volatility', prompt: 'How do you usually react when markets drop sharply for several weeks?', category: 'risk' },
-  { id: 'learning', prompt: 'Would you rather receive tactical trade ideas, educational explainers, or premium long-form analysis?', category: 'lifestyle' },
-  { id: 'time', prompt: 'How much time can you dedicate weekly to tracking markets and acting on recommendations?', category: 'lifestyle' },
+  { id: 'name', prompt: 'What should I call you?', category: 'identity' },
+  { id: 'experience', prompt: 'How many years have you been investing?', category: 'experience' },
+  { id: 'risk', prompt: 'What is your risk style: cautious, balanced, or aggressive?', category: 'risk' },
+  { id: 'goal', prompt: 'What is your main financial goal for the next 1-2 years?', category: 'goal' },
+  { id: 'horizon', prompt: 'What is your preferred investment timeframe?', category: 'goal' },
+  { id: 'focus', prompt: 'Which themes interest you most? (e.g., AI, equities, macro)', category: 'lifestyle' },
+  { id: 'income', prompt: 'Are you looking for regular income, long-term growth, or both?', category: 'goal' },
+  { id: 'volatility', prompt: 'How do you react to a sudden market drop?', category: 'risk' },
+  { id: 'learning', prompt: 'What type of content do you prefer? (trade ideas, explainers, or deep dives)', category: 'lifestyle' },
+  { id: 'time', prompt: 'How much time can you spend tracking markets weekly?', category: 'lifestyle' },
 ];
 
 export const DEFAULT_PROFILE: UserProfile = {
@@ -124,7 +124,7 @@ export function createFallbackPayload(sessionId: string): PersonalizationPayload
       {
         id: 'welcome',
         role: 'assistant',
-        content: `${PROFILING_QUESTIONS[0].prompt} We will use the first 10 messages to build a profile and personalize the ET ecosystem for you.`,
+        content: `${PROFILING_QUESTIONS[0].prompt}`,
         timestamp: new Date().toISOString(),
         status: 'complete',
       },

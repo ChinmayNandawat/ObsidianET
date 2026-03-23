@@ -11,7 +11,11 @@ export async function POST(request: Request) {
 
   const supabase = getSupabaseServerClient();
   if (supabase) {
-    await supabase.from('sessions').upsert({ id: updatedSession.sessionId, payload: updatedSession }).throwOnError().catch(() => null);
+    try {
+      await supabase.from('sessions').upsert({ id: updatedSession.sessionId, payload: updatedSession });
+    } catch (e) {
+      console.warn("Supabase save failed, probably table missing:", e);
+    }
   }
 
   return NextResponse.json(updatedSession);

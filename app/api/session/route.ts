@@ -9,7 +9,11 @@ export async function GET(request: Request) {
 
   const supabase = getSupabaseServerClient();
   if (supabase) {
-    await supabase.from('sessions').upsert({ id: session.sessionId, payload: session }).throwOnError().catch(() => null);
+    try {
+      await supabase.from('sessions').upsert({ id: session.sessionId, payload: session });
+    } catch (e) {
+      console.warn("Supabase save failed on init, probably table missing:", e);
+    }
   }
 
   return NextResponse.json(saveSession(session));

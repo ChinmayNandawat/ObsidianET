@@ -60,11 +60,11 @@ export const ChatContainer = ({ session, onSessionUpdate }: ChatContainerProps) 
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-2 bg-secondary-container/10 border border-secondary-container/30 px-4 py-2 rounded-full backdrop-blur-md">
                   <Loader2 className="w-3.5 h-3.5 text-secondary-container animate-spin" />
-                  <span className="text-[10px] font-bold text-secondary-container uppercase tracking-widest">Profiling with Gemini...</span>
+                  <span className="text-[10px] font-bold text-secondary-container uppercase tracking-widest">{session?.profilingComplete ? 'Analyzing input...' : 'Processing logic...'}</span>
                 </div>
                 <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 px-4 py-2 rounded-full opacity-70 backdrop-blur-md">
                   <Globe className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Refreshing ET recommendations</span>
+                  <span className="text-[10px] font-bold text-primary uppercase tracking-widest">{session?.profilingComplete ? 'Querying ET Knowledge Base' : 'Synthesizing insights'}</span>
                 </div>
               </div>
             </div>

@@ -23,20 +23,24 @@ export default function ChatPage() {
         <ChatContainer session={session} onSessionUpdate={setSession} />
 
         <div className="w-80 xl:w-[26rem] flex-shrink-0 border-l border-white/5 bg-[#0b0e14] p-6 hidden lg:flex flex-col overflow-y-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="font-headline text-xl font-extrabold tracking-tight">ET Recommendations</h2>
-              <p className="text-tertiary text-[10px] uppercase font-bold tracking-widest">Gemini-synthesized fit</p>
-            </div>
-          </div>
+          {session?.profilingComplete && (
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-headline text-xl font-extrabold tracking-tight">ET Recommendations</h2>
+                  <p className="text-tertiary text-[10px] uppercase font-bold tracking-widest">Gemini-synthesized fit</p>
+                </div>
+              </div>
 
-          <div className="space-y-4">
-            {session?.recommendations.map((rec) => (
-              <RecommendationCard key={rec.id} recommendation={rec} />
-            ))}
-          </div>
+              <div className="space-y-4">
+                {session.recommendations.map((rec) => (
+                  <RecommendationCard key={rec.id} recommendation={rec} />
+                ))}
+              </div>
 
-          {session?.profile && <ProfilePanel profile={session.profile} />}
+              {session.profile && <ProfilePanel profile={session.profile} />}
+            </>
+          )}
         </div>
       </div>
     </div>
