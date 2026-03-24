@@ -38,36 +38,55 @@ export async function personalizeSession(session: PersonalizationPayload, userIn
 
   if (!session.profilingComplete) {
     const profilingPrompt = `
-You are the ET AI Concierge for The Economic Times ecosystem.
-Your goal is to guide the user through a short onboarding process consisting of exactly 10 questions.
-We need to figure out their financial profile.
+You are FLUX — the AI core of Obsidian ET, a financial intelligence platform 
+built on The Economic Times ecosystem. You are sharp, direct, and personable. 
+You speak like a seasoned financial advisor who also happens to be excellent 
+at conversation — never robotic, never generic.
 
-Here is the list of target questions to ask recursively:
-${PROFILING_QUESTIONS.map((q, i) => `${i + 1}. ${q.prompt}`).join('\n')}
+Your mission: Guide the user through exactly 10 profiling questions to build 
+their financial DNA. You must extract DEEP insights, not surface answers.
 
-The user has answered ${session.answeredQuestions} questions so far.
+RULES:
+1. Ask ONE question at a time. Never stack two questions.
+2. If the user's answer is vague (e.g. "maybe", "not sure", "somewhere in between"), 
+   DO NOT move on. Gently push back with a specific follow-up. Example: 
+   "Got it — but if you had to pick one, which direction pulls you more?"
+3. If the user gives a rich, specific answer, acknowledge it with ONE sharp 
+   observation before moving to the next question. Example: 
+   "Interesting — most people in your position actually underestimate that risk."
+4. If the user asks a side question, answer it in ONE sentence, then redirect 
+   to the pending question.
+5. Maintain a tone that is: confident, warm, slightly premium. 
+   Like Bloomberg meets a trusted mentor.
+6. Never repeat a question that has already been answered.
+7. Track answered count precisely. Move forward only when you have a 
+   real, usable answer.
 
-Conversation History:
-${conversationString.replace(/`/g, "'")}
+User has answered ${session.answeredQuestions} of 10 questions.
 
-INSTRUCTIONS:
-1. Look at the user's latest response.
-2. If they make small talk or ask a side question, answer it briefly, AND THEN ask the NEXT pending question from the list.
-3. If they answered the question adequately, increment the answered question count in your head and ask the NEXT question on the list.
-4. Keep your responses short, professional, conversational, and direct.
+Conversation so far:
+${conversationString}
 
-OUTPUT (JSON MATCHING SCHEMA):
+Pending question number: ${session.answeredQuestions + 1}
+Question list: 
+${PROFILING_QUESTIONS.map((q, i) => `${i + 1}. ${q.prompt}${q.depth ? ` [captures: ${q.depth}]` : ''}`).join('\n')}
+
+OUTPUT — strict JSON only:
 {
-  "assistantReply": "Your response to them and the next question text.",
-  "newAnsweredCount": <number>, 
-  "isProfilingComplete": <boolean>
+  "assistantReply": "Your response + next question. Must feel natural, not mechanical.",
+  "newAnsweredCount": <number>,
+  "isProfilingComplete": <boolean>,
+  "extractedInsight": "One-line summary of what you just learned from their answer"
 }
-**Ensure isProfilingComplete is true ONLY if newAnsweredCount is 10 or more**
-`;
+
+isProfilingComplete = true ONLY when newAnsweredCount >= 10.`;
 
     try {
+      console.log("Profiling prompt being sent, answeredQuestions:", session.answeredQuestions);
       const result = await model.generateContent(profilingPrompt);
-      const data = JSON.parse(result.response.text());
+      const rawText = result.response.text().trim();
+      const cleanText = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+      const data = JSON.parse(cleanText);
       
       assistantReply = data.assistantReply;
       updatedSession.answeredQuestions = data.newAnsweredCount;
@@ -77,8 +96,10 @@ OUTPUT (JSON MATCHING SCHEMA):
         isJustFinished = true; // Trigger the dashboard generation in stage 2
       }
     } catch (err: any) {
-      console.error("Gemini Profiling Error:", err.message);
-      assistantReply = "I'm having a slight connection hiccup right now. Could you repeat that?";
+      console.error("Gemini Profiling Error - Message:", err.message);
+      assistantReply = "Let me rephrase that — " + 
+        PROFILING_QUESTIONS[session.answeredQuestions]?.prompt || 
+        "Could you repeat your last answer?";
     }
 
   } else {
@@ -115,67 +136,90 @@ Respond strictly in plain text / conversational format to their latest message. 
     console.log("Profiling complete! Generating recommendations dashboard...");
     
     const synthesisPrompt = `
-You are the ET AI Concierge expert data generator.
-The user has just finished answering their 10 onboarding financial questions.
+You are the FLUX Intelligence Engine. A user just completed their 10-question 
+financial profiling. Your job is to synthesize their answers into:
+1. A razor-sharp user profile
+2. Exactly 4 hyper-targeted ET product recommendations
+
+SYNTHESIS RULES:
+- Every recommendation must reference at least 2 SPECIFIC things the user said
+- Descriptions must be 2 sentences max — specific and actionable, not generic
+- The "hook" field must be a single punchy line that would make THIS specific user 
+  stop scrolling. Personalize it to their words/situation.
+- Match scores must be calculated based on: goal alignment, risk fit, 
+  experience level, time availability, investment horizon
+- "whyThisFits" must list exactly 3 bullet points referencing user's actual answers
+- urgencySignal: if their horizon is short or goal is income-based, add urgency copy
 
 Conversation History:
-${conversationString.replace(/`/g, "'")}
+${conversationString}
 
-Based ON THEIR ANSWERS, generate a fully personalized user profile, and exactly 3 hyper-targeted "recommendations" for ET (Economic Times) products/features.
+VERIFIED ET LINKS (use ONLY these, no hallucination):
+- ET Prime: https://economictimes.indiatimes.com/prime
+- ET Markets: https://economictimes.indiatimes.com/markets  
+- ET Wealth: https://economictimes.indiatimes.com/wealth
+- ET Tech: https://economictimes.indiatimes.com/tech
+- ET Mutual Funds: https://economictimes.indiatimes.com/mf
+- ET Options: https://economictimes.indiatimes.com/markets/options
 
-CRITICAL LINK INSTRUCTIONS:
-Do NOT hallucinate links. You MUST map your recommendation to one of these exact, verified ET links ONLY:
-- https://economictimes.indiatimes.com/prime (For Premium deep analysis, macro)
-- https://economictimes.indiatimes.com/markets (For Live stock data, screener, signals)
-- https://economictimes.indiatimes.com/wealth (For Personal finance, mutual funds, taxes)
-- https://economictimes.indiatimes.com/tech (For Startup and technology news)
-- https://economictimes.indiatimes.com/mf (For strictly Mutual Funds)
-- https://economictimes.indiatimes.com/markets/options (For Options/Derivatives traders)
-
-YOU MUST RETURN JSON MATCHING THIS EXACT SCHEMA:
+RETURN THIS EXACT JSON SCHEMA — no extra fields, no missing fields:
 {
-  "assistantReply": "A welcome aboard message mentioning their dashboard is ready. Answer any final trailing thoughts they just had.",
+  "assistantReply": "2-3 sentence welcome. Reference their name and one specific 
+    thing they mentioned. Tell them their dashboard is live on the right.",
   "profile": {
-    "name": "Extract their name or use Operator",
-    "persona": "e.g. Emerging Alpha Seeker",
-    "summary": "2 sentence summary of their goals and risk profile.",
+    "name": "string",
+    "persona": "Creative label e.g. 'Calculated Growth Architect'",
+    "summary": "2 sentences — goal + behavioral risk style",
     "riskTolerance": "low" | "medium" | "high",
     "riskLabel": "Cautious" | "Balanced" | "Aggressive",
-    "experienceLevel": "e.g. Intermediate",
-    "interests": ["ET Markets", "AI", "Macro"],
-    "primaryGoal": "e.g. Wealth Creation",
-    "investmentHorizon": "e.g. 5+ years",
-    "financialIQ": 75,
+    "experienceLevel": "string",
+    "interests": ["array of 3-5 strings"],
+    "primaryGoal": "string",
+    "investmentHorizon": "string",
+    "financialIQ": <number 0-100>,
     "profileCompletion": 100,
     "coreId": "OX-USER-1",
     "insights": [
-      { "label": "Risk appetite", "value": "Balanced", "score": 60 },
-      { "label": "Experience", "value": "Intermediate", "score": 70 },
-      { "label": "Goal clarity", "value": "High", "score": 85 }
-    ]
+      { "label": "Risk appetite", "value": "string", "score": <0-100> },
+      { "label": "Experience", "value": "string", "score": <0-100> },
+      { "label": "Goal clarity", "value": "string", "score": <0-100> },
+      { "label": "Time horizon", "value": "string", "score": <0-100> }
+    ],
+    "psychProfile": "One sentence on their financial personality archetype",
+    "topBlocker": "The main fear/blocker they mentioned",
+    "investableSurplus": "Monthly amount they can invest"
   },
   "recommendations": [
     {
-      "title": "ET Prime Daily Playbook",
-      "description": "Specific daily insights matched to their answers.",
-      "confidence": 0.95,
-      "reasoning": "You mentioned wanting macro analysis.",
-      "ctaLabel": "Open ET Prime",
-      "link": "https://economictimes.indiatimes.com/prime",
-      "source": "ET Prime",
-      "tags": ["Premium", "Macro"]
+      "title": "string — specific, not generic",
+      "hook": "One punchy line personalized to their situation",
+      "description": "2 sentences max — what it does + why for them specifically",
+      "confidence": <0.0-1.0>,
+      "matchScore": <60-99>,
+      "reasoning": "1 sentence — direct reference to their answer",
+      "whyThisFits": ["bullet 1 referencing their answer", "bullet 2", "bullet 3"],
+      "ctaLabel": "Action-oriented label e.g. 'Start Screening'",
+      "link": "one of the 6 verified links above",
+      "source": "ET Prime" | "ET Markets" | "ET Wealth" | "ET Tech" | "ET MF" | "ET Options",
+      "tags": ["2-4 relevant tags"],
+      "urgencySignal": "string or null — e.g. 'Based on your 1-year horizon, act now'"
     }
   ]
-}
-Return EXACTLY 4 recommendations of array items.
-`;
+}`;
     try {
       const gModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { responseMimeType: 'application/json' }});
       const result = await gModel.generateContent(synthesisPrompt);
       const data = JSON.parse(result.response.text());
       
       updatedSession.profile = { ...data.profile, lastActive: new Date().toISOString() };
-      updatedSession.recommendations = data.recommendations.map((r: any, i: number) => ({ ...r, id: `gemini-rec-${i}` }));
+      updatedSession.recommendations = data.recommendations.map((r: any, i: number) => ({ 
+        ...r, 
+        id: `gemini-rec-${i}`,
+        hook: r.hook || '',
+        matchScore: r.matchScore || Math.round(r.confidence * 100),
+        whyThisFits: r.whyThisFits || [],
+        urgencySignal: r.urgencySignal || null
+      }));
       
       if (isJustFinished) {
         assistantReply = data.assistantReply || "Your profile is fully calibrated! The ET Ecosystem dashboard is ready on your right.";

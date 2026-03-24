@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { Shield, ArrowRight, Sparkles, TrendingUp, LayoutGrid, Lock, MessageSquare } from 'lucide-react';
+import { Shield, ArrowRight, Sparkles, TrendingUp, LayoutGrid, Lock, MessageSquare, Bell, Settings } from 'lucide-react';
+import NextImage from 'next/image';
 import { Navbar } from '../components/layout/Navbar';
 import { AIOrb } from '../components/ui/AIOrb';
 
@@ -50,7 +51,7 @@ export default function LandingPage() {
                 transition={{ delay: 0.8 }}
                 className="flex flex-col sm:flex-row gap-4 pt-4"
               >
-                <Link href="/chat">
+                <Link href="/login">
                   <button className="px-8 py-4 bg-primary text-black font-headline font-black rounded-lg shadow-[0_0_40px_rgba(0,200,5,0.3)] btn-elastic text-lg tracking-tight group flex items-center justify-center gap-2 w-full sm:w-auto">
                     Start Your Journey 
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -184,12 +185,34 @@ export default function LandingPage() {
                     {/* Simulated Market Card */}
                     <div className="p-4 rounded-xl border border-white/5 bg-surface/40">
                       <h6 className="text-xs text-white/50 mb-4">Portfolio Strategy Impact</h6>
-                      <div className="flex items-end gap-2 h-16 w-full">
-                        <div className="w-1/5 bg-primary/20 h-[40%] rounded-t"></div>
-                        <div className="w-1/5 bg-primary/30 h-[60%] rounded-t"></div>
-                        <div className="w-1/5 bg-primary/40 h-[50%] rounded-t"></div>
-                        <div className="w-1/5 bg-primary/60 h-[80%] rounded-t"></div>
-                        <div className="w-1/5 bg-primary h-[100%] rounded-t shadow-[0_0_10px_rgba(0,200,5,0.3)]"></div>
+                      <div className="flex flex-1 justify-end items-center gap-4">
+                        <a 
+                          href="/login"
+                          className="text-xs font-mono text-[#00ff41]/60 
+                            hover:text-[#00ff41] border border-[#00ff41]/20 
+                            hover:border-[#00ff41]/50 px-3 py-1.5 rounded 
+                            transition-colors duration-200 mr-4"
+                        >
+                          LOGIN →
+                        </a>
+                        
+                        <div className="h-6 w-px bg-white/10 mx-2"></div>
+                        <button className="p-2 text-tertiary hover:text-white rounded-full transition-colors relative">
+                          <Bell className="w-5 h-5" />
+                          <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-background"></span>
+                        </button>
+                        <button className="p-2 text-tertiary hover:text-white rounded-full transition-colors">
+                          <Settings className="w-5 h-5" />
+                        </button>
+                        <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 ml-2 ring-2 ring-primary/20 relative">
+                          <NextImage 
+                            alt="User" 
+                            src="https://picsum.photos/seed/user/100/100" 
+                            fill
+                            className="object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>

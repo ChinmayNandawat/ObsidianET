@@ -8,16 +8,66 @@ import {
 } from '../types';
 
 export const PROFILING_QUESTIONS: ProfilingQuestion[] = [
-  { id: 'name', prompt: 'What should I call you?', category: 'identity' },
-  { id: 'experience', prompt: 'How many years have you been investing?', category: 'experience' },
-  { id: 'risk', prompt: 'What is your risk style: cautious, balanced, or aggressive?', category: 'risk' },
-  { id: 'goal', prompt: 'What is your main financial goal for the next 1-2 years?', category: 'goal' },
-  { id: 'horizon', prompt: 'What is your preferred investment timeframe?', category: 'goal' },
-  { id: 'focus', prompt: 'Which themes interest you most? (e.g., AI, equities, macro)', category: 'lifestyle' },
-  { id: 'income', prompt: 'Are you looking for regular income, long-term growth, or both?', category: 'goal' },
-  { id: 'volatility', prompt: 'How do you react to a sudden market drop?', category: 'risk' },
-  { id: 'learning', prompt: 'What type of content do you prefer? (trade ideas, explainers, or deep dives)', category: 'lifestyle' },
-  { id: 'time', prompt: 'How much time can you spend tracking markets weekly?', category: 'lifestyle' },
+  {
+    prompt: 'What should I call you?',
+    key: 'name',
+    depth: 'Establishes rapport and personalization for the conversation',
+    followUpTriggers: ['nickname', 'prefer', 'call me']
+  },
+  {
+    prompt: 'If your money could do ONE thing for you in the next 3 years, what would it be?',
+    key: 'primaryGoal',
+    depth: 'Captures core financial motivation, urgency level, and emotional drivers',
+    followUpTriggers: ['retire', 'buy house', 'education', 'business', 'emergency']
+  },
+  {
+    prompt: 'Walk me through what you currently have invested — even roughly. Stocks, FDs, MFs, nothing yet?',
+    key: 'currentPortfolio',
+    depth: 'Assesses investment experience, existing asset allocation, and sophistication level',
+    followUpTriggers: ['just starting', 'some mutual funds', 'stocks', 'FDs', 'real estate']
+  },
+  {
+    prompt: 'If your ₹1 lakh investment dropped to ₹70k in a month, what would you do? (panic sell / hold / buy more)',
+    key: 'riskBehavior',
+    depth: 'Reveals true behavioral risk tolerance through hypothetical scenario',
+    followUpTriggers: ['depends', 'would sell', 'would buy more', 'hold long term']
+  },
+  {
+    prompt: 'After all expenses, roughly how much can you set aside for investing each month?',
+    key: 'monthlySurplus',
+    depth: 'Quantifies investable capacity and financial discipline',
+    followUpTriggers: ['variable', 'depends on month', 'fixed amount', 'nothing left']
+  },
+  {
+    prompt: 'When do you see yourself actually needing this money?',
+    key: 'timeHorizon',
+    depth: 'Defines investment timeline and liquidity requirements',
+    followUpTriggers: ['short term', 'long term', 'retirement', 'specific goal', 'emergency']
+  },
+  {
+    prompt: 'On a scale: Are you a Learner (just starting), Navigator (some experience), or Operator (active trader)?',
+    key: 'knowledgeLevel',
+    depth: 'Self-assessed financial sophistication and preferred engagement level',
+    followUpTriggers: ['confused', 'intermediate', 'advanced', 'expert', 'beginner']
+  },
+  {
+    prompt: 'How do you currently stay updated on markets or finance?',
+    key: 'informationConsumption',
+    depth: 'Identifies content preferences and information habits',
+    followUpTriggers: ['news', 'social media', 'advisors', 'friends', 'dont follow', 'ET']
+  },
+  {
+    prompt: 'What\'s the one thing that has held you back from investing more aggressively?',
+    key: 'psychologicalBarrier',
+    depth: 'Uncovers psychological blocks, fears, and constraint factors',
+    followUpTriggers: ['fear', 'lack knowledge', 'time', 'money', 'risk', 'family']
+  },
+  {
+    prompt: 'Describe your ideal financial situation 5 years from now. Be specific.',
+    key: 'aspirationDepth',
+    depth: 'Captures ambition level, specific goals, and vision for persona generation',
+    followUpTriggers: ['financial freedom', 'passive income', 'wealth', 'security', 'lifestyle']
+  }
 ];
 
 export const DEFAULT_PROFILE: UserProfile = {
