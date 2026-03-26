@@ -7,9 +7,10 @@ export interface Message {
 }
 
 export interface ProfilingQuestion {
-  id: string;
   prompt: string;
-  category: 'identity' | 'experience' | 'risk' | 'goal' | 'lifestyle';
+  key: string;
+  depth: string;
+  followUpTriggers: string[];
 }
 
 export interface ProfileInsight {
@@ -35,6 +36,17 @@ export interface UserProfile {
   insights: ProfileInsight[];
 }
 
+export interface UserIdentity {
+  coreId: string;          // "OX-SHOURYA-4F2A"
+  username: string;        // "shourya"
+  createdAt: string;       // ISO string
+  lastActive: string;      // ISO string
+  profile: UserProfile | null;
+  messages: Message[];
+  profilingComplete: boolean;
+  recommendations: any[];
+}
+
 export interface Recommendation {
   id: string;
   title: string;
@@ -45,6 +57,10 @@ export interface Recommendation {
   link: string;
   source: string;
   tags: string[];
+  hook?: string;
+  matchScore?: number;
+  whyThisFits?: string[];
+  urgencySignal?: string | null;
 }
 
 export interface HubItem {

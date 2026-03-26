@@ -1,0 +1,210 @@
+{
+  "project": {
+    "name": "ObsidianET - Obsidian Flux AI Concierge",
+    "version": "0.1.0",
+    "description": "Financial intelligence engine powered by Economic Times ecosystem",
+    "type": "nextjs-app",
+    "activated_mode": "frontend_developer"
+  },
+  "tech_stack": {
+    "framework": "Next.js 14.2.35",
+    "react": "18.3.1",
+    "typescript": "5.8.2",
+    "styling": "TailwindCSS 4.0.0",
+    "icons": "Lucide React 0.546.0",
+    "animations": "Motion 12.23.24",
+    "backend": "Supabase JS 2.99.3",
+    "ai": "Google Generative AI 0.24.1",
+    "state_management": "React Context/useState",
+    "build_tools": ["ESLint", "PostCSS", "Autoprefixer"]
+  },
+  "auth_system": {
+    "type": "Custom JWT",
+    "token_storage": "localStorage key: obsidian_token",
+    "user_storage": "localStorage key: obsidian_user",
+    "token_expiry": "7d",
+    "password_hashing": "bcryptjs saltRounds 12",
+    "jwt_secret": "process.env.JWT_SECRET",
+    "protected_routes": ["/chat", "/hub", "/simulation"],
+    "public_routes": ["/", "/login"],
+    "supabase_tables": ["user_profiles", "user_sessions"],
+    "context_file": "src/context/AuthContext.tsx"
+  },
+  "architecture": {
+    "structure": {
+      "app_router": "/app - Next.js App Router",
+      "components": "/components - React components",
+      "api_routes": "/app/api - Backend endpoints",
+      "utilities": "/lib - Shared utilities",
+      "types": "/types - TypeScript definitions",
+      "public": "/public - Static assets"
+    },
+    "key_directories": {
+      "pages": ["app/page.tsx - Landing page", "app/chat/page.tsx - Chat interface", "app/hub/page.tsx - Content hub", "app/simulation/page.tsx - Financial simulation", "app/api/auth/register/route.ts - Register API", "app/api/auth/login/route.ts - Login API", "app/api/auth/me/route.ts - Get current user API", "app/api/auth/save-session/route.ts - Save chat session API"],
+      "components": {
+        "layout": ["Navbar.tsx - Main navigation"],
+        "chat": ["ChatContainer.tsx", "ChatMessage.tsx", "ThinkingIndicator.tsx"],
+        "ui": ["AIOrb.tsx - Animated orb component"],
+        "profile": ["ProfilePanel.tsx"],
+        "recommendation": ["RecommendationCard.tsx"]
+      },
+      "lib": {
+        "api": ["api.ts - API client"],
+        "server": ["personalization.ts", "session-store.ts", "supabase.ts"],
+        "client": ["identity.ts", "dummyData.ts"]
+      }
+    }
+  },
+  "features": {
+    "core": [
+      "AI-powered financial chat interface",
+      "User profiling and personalization",
+      "Real-time market data integration",
+      "Content recommendation engine",
+      "Financial simulation tools"
+    ],
+    "ui": [
+      "Responsive design with mobile-first approach",
+      "Dark theme with primary green accent",
+      "Glass morphism effects",
+      "Smooth animations and micro-interactions",
+      "Virtualized components for performance"
+    ],
+    "integrations": [
+      "Economic Times ecosystem",
+      "Supabase for backend services",
+      "Google Generative AI for chat",
+      "Real-time WebSocket connections"
+    ]
+  },
+  "development": {
+    "scripts": {
+      "dev": "next dev -p 3000",
+      "build": "next build",
+      "start": "next start -p 3000",
+      "lint": "next lint"
+    },
+    "environment": {
+      "port": 3000,
+      "node_version": ">=18.0.0",
+      "package_manager": "npm"
+    }
+  },
+  "components_analysis": {
+    "landing_page": {
+      "file": "app/page.tsx",
+      "features": ["Hero section with AI orb", "Interactive terminal mockup", "ET ecosystem showcase", "Responsive design"],
+      "technologies": ["Motion animations", "Lucide icons", "Glass morphism"]
+    },
+    "authentication_page": {
+      "file": "app/login/page.tsx",
+      "features": ["Full-screen auth layout", "Login/Register tabs", "Password strength indicator", "Username preview", "Show/hide password toggles", "Form validation", "Loading states", "Error handling"],
+      "technologies": ["React hooks", "Lucide icons", "Local storage", "API integration"],
+      "api_endpoints": ["/api/auth/login", "/api/auth/register"]
+    },
+    "navigation": {
+      "file": "components/layout/Navbar.tsx",
+      "features": ["Fixed header with backdrop blur", "Active route highlighting", "User avatar and notifications", "Authentication integration", "User profile dropdown"],
+      "routes": ["/chat", "/simulation", "/hub"]
+    },
+    "auth_context": {
+      "file": "src/context/AuthContext.tsx",
+      "features": [
+        "JWT token verification on mount",
+        "Session restore from Supabase",
+        "Auto-logout on invalid token",
+        "useAuth hook export"
+      ]
+    },
+    "type_system": {
+      "file": "types/index.ts",
+      "interfaces": ["Message", "UserProfile", "UserIdentity", "Recommendation", "HubItem", "SimulationScenario"],
+      "covers": ["Chat messaging", "User profiling", "Content recommendations", "Financial simulations"]
+    }
+  },
+  "styling_system": {
+    "theme": "Dark with green primary accent",
+    "design_patterns": ["Glass morphism", "Neumorphism", "Gradient effects"],
+    "responsive": "Mobile-first with Tailwind breakpoints",
+    "animations": "Motion library for smooth transitions",
+    "custom_classes": ["glass-card", "btn-elastic", "animate-float"]
+  },
+  "performance_considerations": {
+    "optimizations": ["Component virtualization", "Code splitting", "Image optimization", "Lazy loading"],
+    "monitoring": ["Core Web Vitals", "Bundle size optimization"],
+    "accessibility": ["WCAG 2.1 AA compliance", "ARIA labels", "Keyboard navigation"]
+  },
+  "api_integration": {
+    "backend": "Supabase for database and auth",
+    "ai_service": "Google Generative AI",
+    "real_time": "WebSocket connections",
+    "external_apis": ["Economic Times ecosystem"]
+  },
+  "deployment": {
+    "platform": "Vercel (recommended)",
+    "environment_variables": [".env.local for local development"],
+    "build_output": "Static export with Next.js"
+  },
+  "error_tracking": {
+    "errors_encountered": [
+      {
+        "error": "TypeError: Failed to construct 'Image': Please use 'new' operator, this DOM object constructor cannot be called as a function.",
+        "cause": "Naming conflict between Next.js Image component import and browser's native Image constructor",
+        "files_affected": ["components/layout/Navbar.tsx", "app/page.tsx"],
+        "date": "2025-06-17T01:00:00Z"
+      },
+      {
+        "error": "GET /login 404 - Next.js returning 404 for login route",
+        "cause": "Login page created in wrong directory (src/app/login/page.tsx instead of app/login/page.tsx)",
+        "files_affected": ["src/app/login/page.tsx"],
+        "date": "2025-06-17T01:15:00Z"
+      }
+    ],
+    "fixes_applied": [
+      {
+        "fix": "Renamed Next.js Image component imports to NextImage to avoid naming collision",
+        "files": [
+          {
+            "path": "components/layout/Navbar.tsx",
+            "change": "import Image from 'next/image' → import NextImage from 'next/image'"
+          },
+          {
+            "path": "app/page.tsx", 
+            "change": "Added missing import: import NextImage from 'next/image' and changed <Image to <NextImage"
+          }
+        ],
+        "date": "2025-06-17T01:00:00Z"
+      },
+      {
+        "fix": "Moved login page from src/app/login/page.tsx to app/login/page.tsx to match Next.js App Router structure",
+        "files": [
+          {
+            "path": "app/login/page.tsx",
+            "change": "Created new login page in correct app directory"
+          }
+        ],
+        "date": "2025-06-17T01:15:00Z"
+      }
+    ],
+    "known_issues": [
+      {
+        "issue": "Login redirect to /chat not working after successful login",
+        "status": "investigating",
+        "suspected_cause": "AuthContext not reading token correctly or router.push timing"
+      },
+      {
+        "issue": "React hooks order violation - 'Rendered more hooks than during the previous render'",
+        "status": "fixed",
+        "cause": "useEffect hook was placed after conditional return statement, violating Rules of Hooks",
+        "file": "app/chat/page.tsx",
+        "fix": "Moved all hooks to top of component before any conditional returns, removed duplicate useEffect"
+      }
+    ],
+    "performance_issues": [],
+    "accessibility_issues": [],
+    "compatibility_issues": []
+  },
+  "context_saved": "2025-06-17",
+  "frontend_mode_activated": true,
+  "last_updated": "2025-06-17T03:30:00Z"
+}

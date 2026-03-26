@@ -22,6 +22,21 @@ export const ChatContainer = ({ session, onSessionUpdate }: ChatContainerProps) 
     }
   }, [session?.messages, isThinking]);
 
+  const handleQuickReply = async (reply: string) => {
+    if (!session) return;
+    setIsThinking(true);
+    setInput('');
+
+    try {
+      const updatedSession = await sendChatMessage(reply);
+      onSessionUpdate(updatedSession);
+    } catch (error) {
+      console.error('AI Error:', error);
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim() || !session) return;
     setIsThinking(true);
@@ -44,6 +59,16 @@ export const ChatContainer = ({ session, onSessionUpdate }: ChatContainerProps) 
       <div className="absolute bottom-0 left-0 w-full h-[400px] bg-gradient-to-t from-[#0b0e14]/90 via-[#0b0e14]/50 to-transparent z-0 pointer-events-none"></div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-12 md:px-12 xl:px-24 space-y-10 scrollbar-hide z-10">
+        {/* Progress Bar */}
+        {session && !session.profilingComplete && (
+          <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-6">
+            <div 
+              className="h-full bg-[#00ff41] transition-all duration-500"
+              style={{ width: `${(session.answeredQuestions / 10) * 100}%` }}
+            />
+          </div>
+        )}
+        
         {!session && (
           <div className="h-full flex flex-col items-center justify-center opacity-50 text-center">
             <Loader2 className="w-16 h-16 text-primary mb-4 animate-spin" />
@@ -53,7 +78,12 @@ export const ChatContainer = ({ session, onSessionUpdate }: ChatContainerProps) 
 
         <div className="max-w-4xl mx-auto w-full space-y-10 pb-20">
           {session?.messages.map((msg) => (
-            <ChatMessage key={msg.id} message={msg} />
+            <ChatMessage 
+              key={msg.id} 
+              message={msg} 
+              session={session}
+              onQuickReply={handleQuickReply}
+            />
           ))}
           {isThinking && (
             <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
