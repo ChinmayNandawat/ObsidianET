@@ -29,3 +29,28 @@ export async function getRecommendations(profile: UserProfile): Promise<Recommen
 export async function getUserProfile(): Promise<UserProfile> {
   return DUMMY_PROFILE;
 }
+
+export async function getHubState(): Promise<import('@/types').HubState> {
+  // Keep the existing sessionId acquisition pattern used in this file
+  const sessionId = (globalThis as any)?.localStorage?.getItem?.('sessionId') ?? undefined;
+
+  try {
+    const res = await fetch(`/api/hub?sessionId=${encodeURIComponent(String(sessionId))}`, {
+      method: 'GET',
+    });
+
+    if (!res.ok) {
+      throw new Error(`Non-ok response: ${res.status}`);
+    }
+
+    const data = (await res.json()) as import('@/types').HubState;
+    return data;
+  } catch {
+    const { DEFAULT_HUB_ITEMS } = await import('@/lib/dummyData');
+    return { hubItems: DEFAULT_HUB_ITEMS, profile: undefined, isPersonalized: false };
+  }
+}
+
+export function isHubPersonalized(hubState: import('@/types').HubState): boolean {
+  return hubState.isPersonalized === true && hubState.hubItems.length > 0;
+}

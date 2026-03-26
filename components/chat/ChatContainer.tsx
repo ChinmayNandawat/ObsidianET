@@ -8,7 +8,7 @@ import { Send, Loader2, Globe, Cpu } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Image from 'next/image';
 
-export const ChatContainer = () => {
+export const ChatContainer = ({ onConversationUpdate }: { onConversationUpdate?: () => void }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -53,7 +53,11 @@ export const ChatContainer = () => {
     
     try {
       const response = await getAIResponse([...messages, userMessage]);
-      setMessages(prev => [...prev, response]);
+      setMessages(prev => {
+        const next = [...prev, response];
+        return next;
+      });
+      onConversationUpdate?.();
     } catch (error) {
       console.error('AI Error:', error);
     } finally {
