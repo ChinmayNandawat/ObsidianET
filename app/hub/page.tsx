@@ -15,6 +15,7 @@ import Image from 'next/image';
 import { getHubState, saveHubTrack } from '../../lib/api';
 import type { HubState, HubItem } from '../../types';
 import { ViewPlansButton } from '../../components/ui/ViewPlansButton';
+import { loadProfile, ProfileData, defaultProfile } from '../../lib/profileStore';
 
 function getAITags(item: HubItem): string[] {
   const tags: string[] = [];
@@ -29,22 +30,41 @@ function getAITags(item: HubItem): string[] {
 }
 
 export default function HubPage() {
-  const [hubState, setHubState] = useState<HubState | null>(null);
+  const [profile, setProfile] = useState<ProfileData>(defaultProfile);
+  const [isReady, setIsReady] = useState(false);
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('ALL');
   const [savedTrack, setSavedTrack] = useState<string[]>([]);
 
-  const refetchHub = useCallback(() => {
-    setError(false);
-    getHubState()
-      .then((data) => {
-        setHubState(data);
-        if (data.savedTrack) {
-          setSavedTrack(data.savedTrack);
-        }
-      })
-      .catch(() => setError(true));
+  useEffect(() => {
+    const data = loadProfile();
+    console.log("Hub page loaded profile:", data);
+    setProfile(data);
+    setIsReady(true);
   }, []);
+
+  if (!isReady) return null;
+
+  if (!profile.isProfilingComplete) {
+    return (
+      <main className="min-h-screen pt-16 bg-[#0b0e14] flex flex-col overflow-hidden">
+        <Navbar />
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-surface-container rounded-2xl border border-white/10 p-8 max-w-md text-center">
+            <h2 className="text-xl font-bold text-white mb-4">Complete your profile first</h2>
+            <p className="text-tertiary mb-6">to unlock your personalized ET ecosystem</p>
+            <a 
+              href="/chat" 
+              className="inline-flex items-center gap-2 bg-primary text-black px-6 py-3 rounded-lg text-sm font-bold transition-all hover:brightness-110"
+            >
+              Go to Terminal <ChevronRight className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   async function handleSaveToggle(itemId: string) {
     const action = savedTrack.includes(itemId) ? 'remove' : 'save';
@@ -59,15 +79,27 @@ export default function HubPage() {
     }
   }
 
-  const filteredItems = useMemo(() => {
-    if (!hubState?.items) return [];
-    if (activeTab === 'ALL') return hubState.items;
-    return hubState.items.filter(item => item.category === activeTab);
-  }, [hubState, activeTab]);
+  const filterMap: Record<string, string> = {
+  "All": "All",
+  "ET Prime": "ET PRIME",
+  "ET Markets": "ET MARKETS", 
+  "Wealth": "ET WEALTH",
+  "Masterclass": "ET MASTERCLASS",
+  "Global Insights": "GLOBAL INSIGHTS"
+};
 
-  useEffect(() => {
-    refetchHub();
-  }, [refetchHub]);
+const filteredRecs = useMemo(() => {
+  if (activeFilter === "All") return profile.recommendations;
+  return profile.recommendations.filter(r => r.section === filterMap[activeFilter]);
+}, [profile.recommendations, activeFilter]);
+
+const searchedRecs = useMemo(() => {
+  return filteredRecs.filter(rec =>
+    searchQuery === "" ||
+    rec.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    rec.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+}, [filteredRecs, searchQuery]);
 
   const tabCopyMap: Record<string, string> = {
     ALL: 'All',
@@ -87,7 +119,7 @@ export default function HubPage() {
             <h2 className="text-xl font-bold text-white mb-4">Hub Unavailable</h2>
             <p className="text-tertiary mb-6">Unable to load your personalized hub. Please try again.</p>
             <button
-              onClick={refetchHub}
+              onClick={() => window.location.reload()}
               className="bg-primary text-black px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all hover:bg-primary/90"
             >
               Retry
@@ -118,100 +150,87 @@ export default function HubPage() {
         <div className="flex items-center gap-3">
           <div className="hidden md:flex items-center gap-1 bg-white/5 border border-white/10 rounded-full px-4 py-1.5">
             <Search className="w-3 h-3 text-tertiary" />
-            <input type="text" placeholder="Search Ecosystem..." className="bg-transparent border-none focus:ring-0 text-xs text-white placeholder:text-tertiary w-40" />
+            <input 
+              type="text" 
+              placeholder="Search Ecosystem..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-transparent border-none focus:ring-0 text-xs text-white placeholder:text-tertiary w-40" 
+            />
           </div>
           <div className="h-6 w-px bg-white/10"></div>
           <HubTabBar
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            sectionScores={hubState?.sectionScores?.map(score => ({
-              category: score.category as any,
-              score: score.score
-            })) || []}
-            isPersonalized={hubState?.isPersonalized || false}
+            activeTab={activeFilter}
+            onTabChange={setActiveFilter}
+            sectionScores={[]}
+            isPersonalized={profile.isProfilingComplete}
           />
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          {hubState?.profileSummary && (
+          {profile.isProfilingComplete && profile.geminiSummary && (
             <ProfileSummaryStrip
-              profileSummary={hubState.profileSummary}
-              isPersonalized={hubState.isPersonalized}
-            />
-          )}
-
-          {hubState?.journeyPath && hubState.journeyPath.length > 0 && (
-            <RecommendedPath
-              journeyPath={hubState.journeyPath}
-              isPersonalized={hubState.isPersonalized}
-            />
-          )}
-
-          {hubState?.nextBestAction && (
-            <NextBestActionCard
-              nextBestAction={hubState.nextBestAction}
-              isPersonalized={hubState.isPersonalized}
+              profileSummary={{
+                name: profile.userName || "User",
+                persona: profile.geminiSummary,
+                riskTolerance: profile.riskTolerance || "Balanced",
+                investmentHorizon: profile.investmentHorizon || "Long Term",
+                primaryGoal: profile.primaryGoal || "Growth",
+                completionPercentage: 100
+              }}
+              isPersonalized={true}
             />
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredItems.map((item, idx) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="group bg-surface-container-low rounded-2xl border border-white/5 p-6 hover:border-primary/30 transition-all duration-300 cursor-pointer"
-                onClick={() => window.open(item.href, '_blank')}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[10px] bg-primary/20 text-primary px-2 py-1 rounded font-black uppercase tracking-widest">
-                        {item.source}
-                      </span>
-                      {item.priorityLabel && (
-                        <span className={`text-[8px] px-2 py-1 rounded font-black uppercase tracking-widest ${
-                          item.priorityLabel === 'Best Match' ? 'bg-green-500/20 text-green-400' :
-                          item.priorityLabel === 'Strong Match' ? 'bg-blue-500/20 text-blue-400' :
-                          'bg-zinc-500/20 text-zinc-400'
-                        }`}>
-                          {item.priorityLabel}
+            {searchedRecs.length > 0 ? (
+              searchedRecs.slice(0, 3).map((rec: any, idx: number) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="group bg-surface-container-low rounded-2xl border border-white/5 p-6 hover:border-primary/30 transition-all duration-300 cursor-pointer"
+                  onClick={() => window.open(rec.url, '_blank')}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] bg-primary/20 text-primary px-2 py-1 rounded font-black uppercase tracking-widest">
+                          {rec.section}
                         </span>
-                      )}
-                      {item.isLive && (
-                        <span className="text-[8px] bg-red-500/20 text-red-400 px-2 py-1 rounded font-black uppercase tracking-widest animate-pulse">
-                          LIVE
+                        <span className="text-[8px] bg-green-500/20 text-green-400 px-2 py-1 rounded font-black uppercase tracking-widest">
+                          {rec.matchScore}% match
                         </span>
-                      )}
-                    </div>
-                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-primary transition-colors">
-                      {item.title}
-                    </h3>
-                    <p className="text-tertiary text-sm leading-relaxed mb-4">
-                      {item.description}
-                    </p>
-                    <div className="flex flex-wrap gap-1 mb-4">
-                      {getAITags(item).map((tag, i) => (
-                        <span key={i} className="text-[8px] bg-white/5 text-tertiary px-2 py-1 rounded">
-                          {tag}
-                        </span>
-                      ))}
+                      </div>
+                      <h3 className="text-lg font-bold text-white mb-2 group-hover:text-primary transition-colors">
+                        {rec.title}
+                      </h3>
+                      <p className="text-tertiary text-sm leading-relaxed mb-4">
+                        {rec.description}
+                      </p>
+                      <div className="flex flex-wrap gap-1 mb-4">
+                        {rec.tags?.map((tag: string, i: number) => (
+                          <span key={i} className="text-[8px] bg-white/5 text-tertiary px-2 py-1 rounded">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2 text-[10px] text-tertiary">
                         <Star className="w-3 h-3" />
-                        <span>{Math.round(item.matchScore * 100)}% match</span>
+                        <span>{rec.matchScore}% match</span>
                       </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleSaveToggle(item.id);
+                          handleSaveToggle(rec.title);
                         }}
                         className={`p-2 rounded-lg transition-all ${
-                          savedTrack.includes(item.id)
+                          savedTrack.includes(rec.title)
                             ? 'bg-primary text-black'
                             : 'bg-white/5 text-tertiary hover:text-white'
                         }`}
@@ -222,15 +241,15 @@ export default function HubPage() {
                     <div className="flex gap-2">
                       <ViewPlansButton 
                         product={
-                          item.source.includes('Prime') ? 'ET Prime' : 
-                          item.source.includes('Markets') ? 'ET Markets' : 'ET Wealth'
+                          rec.section === 'ET PRIME' ? 'ET Prime' : 
+                          rec.section === 'ET MARKETS' ? 'ET Markets' : 'ET Wealth'
                         }
                         className="flex-1"
                       />
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          window.open(item.href, '_blank');
+                          window.open(rec.url, '_blank');
                         }}
                         className="flex-1 bg-primary text-black px-3 py-2 rounded-lg text-xs font-bold transition-all hover:brightness-110 active:scale-95"
                       >
@@ -238,49 +257,104 @@ export default function HubPage() {
                       </button>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))
+            ) : (
+              // Fallback hardcoded cards
+              <>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="group bg-surface-container-low rounded-2xl border border-white/5 p-6 hover:border-primary/30 transition-all duration-300 cursor-pointer"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] bg-primary/20 text-primary px-2 py-1 rounded font-black uppercase tracking-widest">ET PRIME</span>
+                        <span className="text-[8px] bg-green-500/20 text-green-400 px-2 py-1 rounded font-black uppercase tracking-widest">94% match</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-white mb-2 group-hover:text-primary transition-colors">Market Analysis Report</h3>
+                      <p className="text-tertiary text-sm leading-relaxed mb-4">Deep dive into current market trends</p>
+                    </div>
+                  </div>
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="group bg-surface-container-low rounded-2xl border border-white/5 p-6 hover:border-primary/30 transition-all duration-300 cursor-pointer"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] bg-secondary-container/20 text-secondary-container px-2 py-1 rounded font-black uppercase tracking-widest">ET MARKETS</span>
+                        <span className="text-[8px] bg-green-500/20 text-green-400 px-2 py-1 rounded font-black uppercase tracking-widest">89% match</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-white mb-2 group-hover:text-primary transition-colors">Portfolio Rebalancing Guide</h3>
+                      <p className="text-tertiary text-sm leading-relaxed mb-4">Optimize your asset allocation</p>
+                    </div>
+                  </div>
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="group bg-surface-container-low rounded-2xl border border-white/5 p-6 hover:border-primary/30 transition-all duration-300 cursor-pointer"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] bg-tertiary px-2 py-1 rounded font-black uppercase tracking-widest">ET WEALTH</span>
+                        <span className="text-[8px] bg-green-500/20 text-green-400 px-2 py-1 rounded font-black uppercase tracking-widest">85% match</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-white mb-2 group-hover:text-primary transition-colors">Risk Management Strategies</h3>
+                      <p className="text-tertiary text-sm leading-relaxed mb-4">Protect your wealth with hedging</p>
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            )}
           </div>
-
-          {hubState?.missedOpportunities && hubState.missedOpportunities.length > 0 && (
-            <MissedOpportunities
-              missedOpportunities={hubState.missedOpportunities}
-              isPersonalized={hubState.isPersonalized}
-            />
-          )}
 
           <div className="mt-12">
             <h2 className="text-xl font-bold text-white mb-6">Recommended for You</h2>
             <div className="space-y-4">
-              {hubState?.items?.slice(0, 3).map((rec) => (
-                <RecommendationCard key={rec.id} recommendation={{
-                  id: rec.id,
-                  title: rec.title,
-                  description: rec.description,
-                  confidence: rec.matchScore,
-                  reasoning: rec.matchReason || `Based on your interest in ${rec.tags.join(', ')}`,
+              {profile.recommendations.length > 0 ? (
+                <RecommendationCard recommendation={{
+                  id: 'top-rec',
+                  title: profile.recommendations[0].title,
+                  description: profile.recommendations[0].description,
+                  confidence: profile.recommendations[0].matchScore / 100,
+                  reasoning: profile.recommendations[0].geminiReason || 'Based on your profile analysis',
                   ctaLabel: 'Read More',
-                  link: rec.href,
-                  source: rec.source,
-                  tags: rec.tags
+                  link: profile.recommendations[0].url,
+                  source: profile.recommendations[0].product,
+                  tags: profile.recommendations[0].tags || []
                 }} />
-              ))}
+              ) : (
+                <RecommendationCard recommendation={{
+                  id: 'fallback-rec',
+                  title: 'Market Analysis Report',
+                  description: 'Deep dive into current market trends and investment opportunities',
+                  confidence: 0.94,
+                  reasoning: 'Based on your interest in financial markets and growth opportunities',
+                  ctaLabel: 'Read More',
+                  link: 'https://etprime.economictimes.com',
+                  source: 'ET Prime',
+                  tags: ['Market Analysis', 'Investment', 'Growth']
+                }} />
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {hubState && (
-        <div className="hidden">
-          <ChatContainer
-            session={null}
-            onSessionUpdate={() => {
-              refetchHub();
-            }}
-          />
-        </div>
-      )}
+      <div className="hidden">
+        <ChatContainer
+          session={null}
+          onSessionUpdate={() => {}}
+        />
+      </div>
     </main>
   );
 }

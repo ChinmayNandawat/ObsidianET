@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-04-17' });
     
     const fullPrompt = SIMULATION_REASONING_PROMPT
       .replace('{profile}', JSON.stringify(session.profile, null, 2))

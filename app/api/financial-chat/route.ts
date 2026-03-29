@@ -81,7 +81,7 @@ export async function POST(request: Request) {
 
     try {
       // Use Gemini AI for intelligent responses
-      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-04-17' });
       
       const fullPrompt = `${OBSIDIAN_FLUX_ASSISTANT_PROMPT}\n\nUser Question: "${message}"\n\nPlease provide a helpful, intelligent response following the guidelines above.`;
       
