@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { Shield, ArrowRight, Sparkles, TrendingUp, LayoutGrid, Lock, MessageSquare } from 'lucide-react';
 import { Navbar } from '../components/layout/Navbar';
 import { AIOrb } from '../components/ui/AIOrb';
+import { FinancialChatbot } from '../components/ui/FinancialChatbot';
 
 export default function LandingPage() {
   return (
@@ -406,6 +407,9 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+      
+      {/* Financial Chatbot */}
+      <FinancialChatbot />
     </div>
   );
 }

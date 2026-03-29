@@ -46,6 +46,7 @@ export const Navbar = () => {
               src="https://picsum.photos/seed/user/100/100" 
               fill
               className="object-cover"
+              sizes="(max-width: 768px) 100vw, 100vw"
               referrerPolicy="no-referrer"
             />
           </div>

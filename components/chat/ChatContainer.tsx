@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { PersonalizationPayload } from '../../types';
 import { sendChatMessage } from '../../lib/api';
+import { saveProfile, loadProfile, clearProfile } from '../../lib/profileStore';
 import { ChatMessage } from './ChatMessage';
 import { Send, Loader2, Globe, Cpu } from 'lucide-react';
 
@@ -31,6 +32,136 @@ export const ChatContainer = ({ session, onSessionUpdate }: ChatContainerProps) 
     try {
       const updatedSession = await sendChatMessage(outbound);
       onSessionUpdate(updatedSession);
+      
+      // Save each answer to profileStore
+      if (updatedSession.answeredQuestions > (session?.answeredQuestions || 0)) {
+        const currentQuestionNumber = updatedSession.answeredQuestions;
+        saveProfile({
+          userName: loadProfile().userName || "",
+          answers: {
+            ...loadProfile().answers,
+            [`question_${currentQuestionNumber}`]: outbound
+          }
+        });
+      }
+      
+      // After question 10 - call Gemini
+      if (updatedSession.profilingComplete && !session?.profilingComplete) {
+        const profile = loadProfile();
+
+        const prompt = `
+You are a financial AI for Economic Times India.
+Analyze this user profile and return ONLY a JSON object.
+No markdown. No code fences. No explanation.
+Start response with { and end with }.
+
+User profile answers: ${JSON.stringify(profile.answers)}
+
+Return exactly this JSON:
+{
+  "primaryGoal": "short goal phrase e.g. Retire at 55",
+  "riskTolerance": "aggressive or balanced or conservative",
+  "investorType": "retail or hni or institutional",
+  "geminiSummary": "2-3 sentence profile summary",
+  "projectionName": "creative name e.g. Retirement Alpha",
+  "optimistic": <integer in lakhs e.g. 42>,
+  "expected": <integer in lakhs e.g. 28>,
+  "projectionReasoning": "2-3 sentences explaining the numbers",
+  "growthVector": "one line growth description",
+  "drawdownGuard": "one line risk protection description",
+  "hedgeEfficiency": "one line hedge description",
+  "recommendations": [
+    {
+      "product": "ET Prime",
+      "section": "ET PRIME",
+      "title": "relevant article/product title",
+      "description": "one line why this matches user",
+      "matchScore": 94,
+      "url": "https://etprime.economictimes.com",
+      "tags": ["tag1", "tag2", "tag3"],
+      "geminiReason": "Based on your interest in X, this matches perfectly"
+    },
+    {
+      "product": "ET Markets",
+      "section": "ET MARKETS",
+      "title": "relevant title",
+      "description": "one line description",
+      "matchScore": 89,
+      "url": "https://markets.economictimes.indiatimes.com",
+      "tags": ["tag1", "tag2"],
+      "geminiReason": "reason based on user answers"
+    },
+    {
+      "product": "ET Wealth",
+      "section": "ET WEALTH",
+      "title": "relevant title",
+      "description": "one line description",
+      "matchScore": 85,
+      "url": "https://economictimes.indiatimes.com/wealth",
+      "tags": ["tag1", "tag2"],
+      "geminiReason": "reason based on user answers"
+    },
+    {
+      "product": "ET Masterclass",
+      "section": "ET MASTERCLASS",
+      "title": "relevant title",
+      "description": "one line description",
+      "matchScore": 81,
+      "url": "https://economictimes.indiatimes.com/masterclass",
+      "tags": ["tag1", "tag2"],
+      "geminiReason": "reason based on user answers"
+    },
+    {
+      "product": "ET Global",
+      "section": "GLOBAL INSIGHTS",
+      "title": "relevant title",
+      "description": "one line description",
+      "matchScore": 77,
+      "url": "https://economictimes.indiatimes.com/markets",
+      "tags": ["tag1", "tag2"],
+      "geminiReason": "reason based on user answers"
+    }
+  ]
+}
+`;
+
+        // Call Gemini via API route
+        try {
+          const response = await fetch("/api/gemini", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt, type: "profile" })
+          });
+
+          const data = await response.json();
+          
+          // Safe JSON parse — handles markdown fences
+          let parsed: Record<string, unknown> = {};
+          try {
+            let clean = (data.content || "").trim();
+            clean = clean.replace(/```json\n?/gi, "").replace(/```\n?/gi, "").trim();
+            const match = clean.match(/\{[\s\S]*\}/);
+            parsed = JSON.parse(match ? match[0] : clean);
+          } catch (e) {
+            console.error("❌ Profile parse failed:", e);
+            console.log("Raw response:", data.content);
+          }
+
+          // Save to localStorage
+          saveProfile({
+            ...parsed,
+            isProfilingComplete: true,
+          } as any);
+
+          console.log("✅ Profile saved:", loadProfile());
+
+        } catch (err) {
+          console.error("❌ Gemini call failed:", err);
+          // Save completion flag even if Gemini fails
+          // so user isn't stuck on overlay
+          saveProfile({ isProfilingComplete: true });
+        }
+      }
     } catch (error) {
       console.error('AI Error:', error);
     } finally {
@@ -38,7 +169,15 @@ export const ChatContainer = ({ session, onSessionUpdate }: ChatContainerProps) 
     }
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
+    <>
     <div className="flex-1 flex flex-col bg-transparent relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-[300px] bg-gradient-to-b from-[#0b0e14] to-transparent z-0 pointer-events-none"></div>
       <div className="absolute bottom-0 left-0 w-full h-[400px] bg-gradient-to-t from-[#0b0e14]/90 via-[#0b0e14]/50 to-transparent z-0 pointer-events-none"></div>
@@ -94,7 +233,7 @@ export const ChatContainer = ({ session, onSessionUpdate }: ChatContainerProps) 
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              onKeyDown={handleKeyPress}
               placeholder={session?.profilingComplete ? 'Ask for recommendations, ET content, or portfolio guidance...' : session?.profilingQuestions[session.answeredQuestions]?.prompt || 'Answer the onboarding question...'}
               className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder:text-white/30 font-medium text-[15px] py-3 outline-none"
             />
@@ -109,5 +248,29 @@ export const ChatContainer = ({ session, onSessionUpdate }: ChatContainerProps) 
         </div>
       </div>
     </div>
+    
+    {/* Reset Button for Demos */}
+    <button
+      onClick={() => { 
+        clearProfile();
+        window.location.reload(); 
+      }}
+      style={{
+        position: "fixed",
+        bottom: 16,
+        left: 16,
+        fontSize: 11,
+        color: "#444",
+        background: "transparent",
+        border: "1px solid #333",
+        borderRadius: 4,
+        padding: "4px 8px",
+        cursor: "pointer",
+        zIndex: 999
+      }}
+    >
+      Reset
+    </button>
+    </>
   );
 };
