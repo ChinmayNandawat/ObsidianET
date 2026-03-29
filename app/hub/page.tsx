@@ -44,6 +44,41 @@ export default function HubPage() {
     setIsReady(true);
   }, []);
 
+  const filterMap: Record<string, string> = {
+    "All": "All",
+    "ET Prime": "ET PRIME",
+    "ET Markets": "ET MARKETS", 
+    "Wealth": "ET WEALTH",
+    "Masterclass": "ET MASTERCLASS",
+    "Global Insights": "GLOBAL INSIGHTS"
+  };
+
+  const filteredRecs = useMemo(() => {
+    if (activeFilter === "All") return profile.recommendations || [];
+    return (profile.recommendations || []).filter(r => r.section === filterMap[activeFilter]);
+  }, [profile.recommendations, activeFilter]);
+
+  const searchedRecs = useMemo(() => {
+    return filteredRecs.filter(rec =>
+      searchQuery === "" ||
+      rec.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      rec.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [filteredRecs, searchQuery]);
+
+  async function handleSaveToggle(itemId: string) {
+    const action = savedTrack.includes(itemId) ? 'remove' : 'save';
+    setSavedTrack(prev =>
+      action === 'save' ? [...prev, itemId] : prev.filter(id => id !== itemId)
+    );
+    
+    try {
+      await saveHubTrack(itemId, action);
+    } catch (err) {
+      console.error('Failed to save track:', err);
+    }
+  }
+
   if (!isReady) return null;
 
   if (!profile.isProfilingComplete) {
@@ -65,41 +100,6 @@ export default function HubPage() {
       </main>
     );
   }
-
-  async function handleSaveToggle(itemId: string) {
-    const action = savedTrack.includes(itemId) ? 'remove' : 'save';
-    setSavedTrack(prev =>
-      action === 'save' ? [...prev, itemId] : prev.filter(id => id !== itemId)
-    );
-    
-    try {
-      await saveHubTrack(itemId, action);
-    } catch (err) {
-      console.error('Failed to save track:', err);
-    }
-  }
-
-  const filterMap: Record<string, string> = {
-  "All": "All",
-  "ET Prime": "ET PRIME",
-  "ET Markets": "ET MARKETS", 
-  "Wealth": "ET WEALTH",
-  "Masterclass": "ET MASTERCLASS",
-  "Global Insights": "GLOBAL INSIGHTS"
-};
-
-const filteredRecs = useMemo(() => {
-  if (activeFilter === "All") return profile.recommendations;
-  return profile.recommendations.filter(r => r.section === filterMap[activeFilter]);
-}, [profile.recommendations, activeFilter]);
-
-const searchedRecs = useMemo(() => {
-  return filteredRecs.filter(rec =>
-    searchQuery === "" ||
-    rec.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    rec.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-}, [filteredRecs, searchQuery]);
 
   const tabCopyMap: Record<string, string> = {
     ALL: 'All',

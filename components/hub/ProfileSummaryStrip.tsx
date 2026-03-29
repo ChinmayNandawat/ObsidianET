@@ -25,12 +25,12 @@ export function ProfileSummaryStrip({ profileSummary, isPersonalized }: ProfileS
           </div>
           <div>
             <p className="text-xs text-zinc-500 mb-0.5">Style</p>
-            <p className="text-sm text-zinc-300">{profileSummary.style}</p>
+            <p className="text-sm text-zinc-300">{profileSummary.style || profileSummary.riskTolerance || 'Balanced'}</p>     
           </div>
           <div>
             <p className="text-xs text-zinc-500 mb-0.5">Best ET fit</p>
             <p className="text-sm text-zinc-300">
-              {profileSummary.bestETFit.join(' + ')}
+              {profileSummary.bestETFit?.join(' + ') || 'ET Prime + ET Markets'}
             </p>
           </div>
         </div>
