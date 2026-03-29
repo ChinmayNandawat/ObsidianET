@@ -1,6 +1,7 @@
 import { Recommendation } from '../../types';
 import Link from 'next/link';
 import { motion } from 'motion/react';
+import { ViewPlansButton } from '../ui/ViewPlansButton';
 
 interface RecommendationCardProps {
   recommendation: Recommendation;
@@ -41,9 +42,18 @@ export const RecommendationCard = ({ recommendation }: RecommendationCardProps) 
         ))}
       </div>
 
-      <Link href={recommendation.link} target="_blank" className={`block w-full py-2.5 text-center text-xs font-bold rounded-lg transition-all ${isHighMatch ? 'bg-primary text-black hover:brightness-110' : 'border border-secondary-container text-secondary-container hover:bg-secondary-container/10'}`}>
-        {recommendation.ctaLabel}
-      </Link>
+      <div className="flex gap-2">
+        <ViewPlansButton 
+          product={
+            recommendation.source.includes('Prime') ? 'ET Prime' : 
+            recommendation.source.includes('Markets') ? 'ET Markets' : 'ET Wealth'
+          }
+          className="flex-1"
+        />
+        <Link href={recommendation.link} target="_blank" className={`flex-1 py-2.5 text-center text-xs font-bold rounded-lg transition-all ${isHighMatch ? 'bg-primary text-black hover:brightness-110' : 'border border-secondary-container text-secondary-container hover:bg-secondary-container/10'}`}>
+          {recommendation.ctaLabel}
+        </Link>
+      </div>
     </motion.div>
   );
 };

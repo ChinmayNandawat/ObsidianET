@@ -45,3 +45,75 @@ export async function getSimulationState() {
   const response = await fetch(`/api/simulation${query}`, { cache: 'no-store' });
   return response.json();
 }
+
+export async function getSimulationReasoning(optimistic: string, expected: string) {
+  const sessionId = getStoredSessionId();
+  const query = sessionId ? `?sessionId=${sessionId}` : '';
+  const response = await fetch(`/api/simulation-reasoning${query}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ optimistic, expected }),
+  });
+  return response.json();
+}
+
+export async function recalculateSimulation() {
+  const sessionId = getStoredSessionId();
+  const query = sessionId ? `?sessionId=${sessionId}` : '';
+  const response = await fetch(`/api/simulation-recalculate${query}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return response.json();
+}
+
+export async function sendSimulationChatMessage(message: string): Promise<{
+  response: string;
+  category: 'guidance' | 'analysis' | 'explanation';
+  timestamp: string;
+}> {
+  const sessionId = getStoredSessionId();
+  const query = sessionId ? `?sessionId=${sessionId}` : '';
+  const response = await fetch(`/api/simulation-chat${query}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message }),
+  });
+  return response.json();
+}
+
+export async function sendFinancialChatMessage(message: string): Promise<{
+  response: string;
+  category: 'stocks' | 'trading' | 'investment' | 'analysis' | 'guidance';
+  timestamp: string;
+}> {
+  const response = await fetch('/api/financial-chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message }),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to get financial chat response');
+  }
+  
+  return response.json();
+}
+
+export async function isHubPersonalized() {
+  const sessionId = getStoredSessionId();
+  const query = sessionId ? `?sessionId=${sessionId}` : '';
+  const response = await fetch(`/api/hub/personalized${query}`, { cache: 'no-store' });
+  return response.json();
+}
+
+export async function saveHubTrack(itemId: string, action: 'save' | 'remove') {
+  const sessionId = getStoredSessionId();
+  const query = sessionId ? `?sessionId=${sessionId}` : '';
+  const response = await fetch(`/api/hub/track${query}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ itemId, action }),
+  });
+  return response.json();
+}

@@ -76,6 +76,10 @@ export const DEFAULT_HUB_ITEMS: HubItem[] = [
     href: 'https://economictimes.indiatimes.com/prime',
     matchScore: 0.91,
     tags: ['Sector Rotation', 'Institutional', 'Long Form'],
+    category: 'ET_PRIME',
+    priorityLabel: 'Best Match',
+    isLive: false,
+    isSaved: false,
   },
   {
     id: 'hub-2',
@@ -86,6 +90,10 @@ export const DEFAULT_HUB_ITEMS: HubItem[] = [
     href: 'https://economictimes.indiatimes.com/markets',
     matchScore: 0.86,
     tags: ['Dashboard', 'Benchmarks', 'Real Time'],
+    category: 'ET_MARKETS',
+    priorityLabel: 'High Signal',
+    isLive: true,
+    isSaved: false,
   },
   {
     id: 'hub-3',
@@ -96,14 +104,45 @@ export const DEFAULT_HUB_ITEMS: HubItem[] = [
     href: 'https://economictimes.indiatimes.com/wealth',
     matchScore: 0.83,
     tags: ['Wealth', 'Planning', 'Learning'],
+    category: 'WEALTH',
+    priorityLabel: 'Goal Aligned',
+    isLive: false,
+    isSaved: false,
   },
 ];
+
+// Helper function to generate profile-driven metrics
+function generateProfileMetrics(profile: UserProfile) {
+  const riskMultiplier = profile.riskTolerance === 'high' ? 1.5 : profile.riskTolerance === 'low' ? 0.8 : 1.0;
+  const horizonMultiplier = profile.investmentHorizon.includes('Long') ? 1.2 : profile.investmentHorizon.includes('Short') ? 0.9 : 1.0;
+  
+  return [
+    { 
+      label: 'Growth vector', 
+      value: `+${(12.4 * riskMultiplier * horizonMultiplier).toFixed(1)}%`, 
+      detail: 'Annualized upside from profile-aligned ideas', 
+      tone: 'positive' as const 
+    },
+    { 
+      label: 'Drawdown guard', 
+      value: `-${(8.2 / riskMultiplier).toFixed(1)}%`, 
+      detail: 'Expected downside in a stress window', 
+      tone: riskMultiplier > 1.2 ? 'warning' as const : 'neutral' as const 
+    },
+    { 
+      label: 'Hedge efficiency', 
+      value: `${(94 * horizonMultiplier).toFixed(0)}%`, 
+      detail: 'Alignment between your goals and ET hedging content', 
+      tone: 'positive' as const 
+    },
+  ];
+}
 
 export const DEFAULT_SIMULATION: SimulationScenario = {
   title: 'Projection Alpha-7',
   subtitle: 'Gemini will convert your profile into a forward scenario once onboarding is complete.',
-  optimistic: '$4.2M',
-  expected: '$2.8M',
+  optimistic: '₹42L',
+  expected: '₹28L',
   points: [38, 42, 49, 58, 63, 72, 79, 88, 96, 100],
   metrics: [
     { label: 'Growth vector', value: '+12.4%', detail: 'Annualized upside from profile-aligned ideas', tone: 'positive' },
@@ -111,13 +150,33 @@ export const DEFAULT_SIMULATION: SimulationScenario = {
     { label: 'Hedge efficiency', value: '94%', detail: 'Alignment between your goals and ET hedging content', tone: 'positive' },
   ],
   adjustments: [
-    { id: 'adj-1', title: 'Increase AI theme exposure', detail: 'Gemini sees recurring interest in innovation-led growth setups.' },
-    { id: 'adj-2', title: 'Pair conviction with ET Wealth explainers', detail: 'Use ET Wealth modules to translate ideas into allocation discipline.' },
-    { id: 'adj-3', title: 'Track macro risk weekly', detail: 'A short weekly macro review reduces overreaction during volatility.' },
+    { 
+      id: 'adj-1', 
+      title: 'ET Wealth: Strategic Portfolio Rebalancing', 
+      detail: 'Quarterly rebalancing strategy for optimal risk-adjusted returns',
+      etSection: 'ET Wealth',
+      etLink: 'https://economictimes.indiatimes.com/wealth'
+    },
+    { 
+      id: 'adj-2', 
+      title: 'ET Markets: Sector Rotation Insights', 
+      detail: 'Data-driven sector allocation based on market cycles',
+      etSection: 'ET Markets',
+      etLink: 'https://economictimes.indiatimes.com/markets'
+    },
+    { 
+      id: 'adj-3', 
+      title: 'ET Prime: Alternative Investment Opportunities', 
+      detail: 'Exploring beyond traditional assets for enhanced returns',
+      etSection: 'ET Prime',
+      etLink: 'https://economictimes.indiatimes.com/prime'
+    },
   ],
 };
 
 export function createFallbackPayload(sessionId: string): PersonalizationPayload {
+  const profile = DEFAULT_PROFILE;
+  
   return {
     sessionId,
     messages: [
@@ -129,10 +188,13 @@ export function createFallbackPayload(sessionId: string): PersonalizationPayload
         status: 'complete',
       },
     ],
-    profile: DEFAULT_PROFILE,
+    profile,
     recommendations: DEFAULT_RECOMMENDATIONS,
     hubItems: DEFAULT_HUB_ITEMS,
-    simulation: DEFAULT_SIMULATION,
+    simulation: {
+      ...DEFAULT_SIMULATION,
+      metrics: generateProfileMetrics(profile),
+    },
     profilingQuestions: PROFILING_QUESTIONS,
     answeredQuestions: 0,
     profilingComplete: false,

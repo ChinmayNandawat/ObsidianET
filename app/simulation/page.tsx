@@ -2,20 +2,48 @@
 
 import { useEffect, useState } from 'react';
 import { Navbar } from '../../components/layout/Navbar';
-import { Activity, RotateCcw, Download, Save, ChevronRight, ShieldCheck, TrendingUp, AlertTriangle } from 'lucide-react';
-import { getSimulationState } from '../../lib/api';
+import { Activity, RotateCcw, Download, Save, ChevronRight, ShieldCheck, TrendingUp, AlertTriangle, ExternalLink, RefreshCw } from 'lucide-react';
+import { getSimulationState, getSimulationReasoning, recalculateSimulation } from '../../lib/api';
 import { SimulationScenario, UserProfile } from '../../types';
+import { SimulationChatbot } from '../../components/ui/SimulationChatbot';
+import { ViewPlansButton } from '../../components/ui/ViewPlansButton';
 
 export default function SimulationPage() {
   const [simulation, setSimulation] = useState<SimulationScenario | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [reasoning, setReasoning] = useState<string>('');
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   useEffect(() => {
     getSimulationState().then((data) => {
       setSimulation(data.simulation);
       setProfile(data.profile);
+      
+      // Get reasoning for the simulation
+      if (data.simulation) {
+        getSimulationReasoning(data.simulation.optimistic, data.simulation.expected)
+          .then(reasoningData => setReasoning(reasoningData.reasoning))
+          .catch(error => console.error('Failed to get reasoning:', error));
+      }
     }).catch((error) => console.error('Failed to load simulation', error));
   }, []);
+
+  const handleRecalculate = async () => {
+    setIsRecalculating(true);
+    try {
+      const newSimulation = await recalculateSimulation();
+      setSimulation(newSimulation);
+      
+      // Get new reasoning
+      getSimulationReasoning(newSimulation.optimistic, newSimulation.expected)
+        .then(reasoningData => setReasoning(reasoningData.reasoning))
+        .catch(error => console.error('Failed to get reasoning:', error));
+    } catch (error) {
+      console.error('Failed to recalculate:', error);
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
 
   return (
     <main className="min-h-screen pt-16 bg-[#0b0e14] flex flex-col overflow-hidden">
@@ -35,8 +63,20 @@ export default function SimulationPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-tertiary hover:text-white px-4 py-2 rounded-lg text-xs font-bold border border-white/10 transition-all">
-            <RotateCcw className="w-3 h-3" /> Recalculate
+          <button 
+            onClick={handleRecalculate}
+            disabled={isRecalculating}
+            className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-tertiary hover:text-white px-4 py-2 rounded-lg text-xs font-bold border border-white/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isRecalculating ? (
+              <>
+                <RefreshCw className="w-3 h-3 animate-spin" /> Recalculating...
+              </>
+            ) : (
+              <>
+                <RotateCcw className="w-3 h-3" /> Recalculate
+              </>
+            )}
           </button>
           <button className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-tertiary hover:text-white px-4 py-2 rounded-lg text-xs font-bold border border-white/10 transition-all">
             <Save className="w-3 h-3" /> Save Scenario
@@ -76,6 +116,16 @@ export default function SimulationPage() {
                     <stop offset="100%" stopColor="#00C805" />
                   </linearGradient>
                 </defs>
+                {/* Nifty 50 Benchmark Line (12% CAGR) */}
+                <polyline
+                  fill="none"
+                  stroke="#ffffff30"
+                  strokeWidth="2"
+                  strokeDasharray="5,5"
+                  points="0,440,111,392,222,344,333,296,444,248,555,200,666,152,777,104,888,56,1000,8"
+                  className="opacity-50"
+                />
+                {/* User Projection Line */}
                 <polyline
                   fill="none"
                   stroke="url(#grad-primary)"
@@ -83,6 +133,8 @@ export default function SimulationPage() {
                   points={(simulation?.points || [20, 35, 40, 55, 62, 70, 82, 90, 95, 100]).map((point, index, array) => `${(1000 / (array.length - 1)) * index},${500 - point * 4}`).join(' ')}
                   className="drop-shadow-[0_0_15px_rgba(0,200,5,0.5)]"
                 />
+                {/* Nifty 50 Label */}
+                <text x="850" y="100" fill="#ffffff50" fontSize="10" className="text-[10px]">Nifty 50 (12% CAGR)</text>
               </svg>
             </div>
 
@@ -94,6 +146,14 @@ export default function SimulationPage() {
               <span>Year 20</span>
             </div>
           </div>
+
+          {/* Why This Projection? Section */}
+          {reasoning && (
+            <div className="bg-surface-container-low rounded-3xl border border-white/5 p-6">
+              <h3 className="text-lg font-black font-headline text-white mb-3">Why This Projection?</h3>
+              <p className="text-tertiary text-sm leading-relaxed">{reasoning}</p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {simulation?.metrics.map((metric) => (
@@ -127,19 +187,47 @@ export default function SimulationPage() {
             <h4 className="text-[10px] font-bold text-tertiary uppercase tracking-widest mb-4">Recommended Adjustments</h4>
             <div className="space-y-3">
               {simulation?.adjustments.map((item, i) => (
-                <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 group hover:border-primary/30 transition-all">
-                  <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-[10px] font-black">{i + 1}</div>
-                  <div className="min-w-0">
-                    <div className="text-xs text-white">{item.title}</div>
-                    <div className="text-[10px] text-tertiary mt-1">{item.detail}</div>
+                <div key={item.id} className="p-4 rounded-xl bg-white/5 border border-white/10 group hover:border-primary/30 transition-all">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-[10px] font-black">{i + 1}</div>
+                        {item.etSection && (
+                          <span className="text-[8px] bg-primary/20 text-primary px-2 py-1 rounded font-black uppercase tracking-widest">
+                            {item.etSection}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm text-white font-medium mb-2">{item.title}</div>
+                      <div className="text-[10px] text-tertiary leading-relaxed">{item.detail}</div>
+                    </div>
                   </div>
-                  <ChevronRight className="w-3 h-3 ml-auto text-tertiary flex-shrink-0" />
+                  {item.etLink && (
+                    <div className="mt-3 pt-3 border-t border-white/10">
+                      <div className="flex gap-2">
+                        <ViewPlansButton 
+                          product={item.etSection === 'ET Prime' ? 'ET Prime' : item.etSection === 'ET Markets' ? 'ET Markets' : 'ET Wealth'}
+                        />
+                        <a 
+                          href={item.etLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 bg-primary text-black px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all hover:brightness-110 active:scale-95"
+                        >
+                          Read on ET <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Simulation Chatbot */}
+      <SimulationChatbot simulation={simulation} profile={profile} />
     </main>
   );
 }

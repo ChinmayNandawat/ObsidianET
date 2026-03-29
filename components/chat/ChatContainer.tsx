@@ -38,6 +38,13 @@ export const ChatContainer = ({ session, onSessionUpdate }: ChatContainerProps) 
     }
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col bg-transparent relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-[300px] bg-gradient-to-b from-[#0b0e14] to-transparent z-0 pointer-events-none"></div>
@@ -94,7 +101,7 @@ export const ChatContainer = ({ session, onSessionUpdate }: ChatContainerProps) 
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              onKeyDown={handleKeyPress}
               placeholder={session?.profilingComplete ? 'Ask for recommendations, ET content, or portfolio guidance...' : session?.profilingQuestions[session.answeredQuestions]?.prompt || 'Answer the onboarding question...'}
               className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder:text-white/30 font-medium text-[15px] py-3 outline-none"
             />

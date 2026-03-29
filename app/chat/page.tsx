@@ -7,6 +7,7 @@ import { ProfilePanel } from '../../components/profile/ProfilePanel';
 import { RecommendationCard } from '../../components/recommendation/RecommendationCard';
 import { getSessionState } from '../../lib/api';
 import { PersonalizationPayload } from '../../types';
+import { FinancialChatbot } from '../../components/ui/FinancialChatbot';
 
 export default function ChatPage() {
   const [session, setSession] = useState<PersonalizationPayload | null>(null);
@@ -43,6 +44,9 @@ export default function ChatPage() {
           )}
         </div>
       </div>
+      
+      {/* Financial Chatbot */}
+      <FinancialChatbot />
     </div>
   );
 }
