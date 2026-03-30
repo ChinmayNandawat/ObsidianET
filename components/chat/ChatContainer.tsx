@@ -51,25 +51,28 @@ export const ChatContainer = ({ session, onSessionUpdate }: ChatContainerProps) 
 
         const prompt = `
 You are a financial AI for Economic Times India.
-Analyze this user profile and return ONLY a JSON object.
-No markdown. No code fences. No explanation.
-Start response with { and end with }.
+Analyze this user profile (their answers to 10 onboarding questions) to build a deeply personalized final projection and recommendation dashboard.
 
 User profile answers: ${JSON.stringify(profile.answers)}
 
-Return exactly this JSON:
+CRITICAL INSTRUCTIONS:
+1. Base the "optimistic" and "expected" financial projections explicitly on their answers (e.g. if they say they invest 1 Lakh a month, the 10-year projection should realistically be in Crores/Lakhs based on Indian markets).
+2. The values for optimistic and expected must be purely INTEGER numbers representing LAKHS (e.g., if you project 1 Crore, write 100. If 50 Lakhs, write 50).
+3. Ensure the projectionName, growthVector, drawdownGuard, and hedgeEfficiency directly reflect their stated risk tolerance and goals.
+
+Return exactly this JSON. No markdown. No code fences. Start response with { and end with }.
 {
   "primaryGoal": "short goal phrase e.g. Retire at 55",
   "riskTolerance": "aggressive or balanced or conservative",
   "investorType": "retail or hni or institutional",
-  "geminiSummary": "2-3 sentence profile summary",
-  "projectionName": "creative name e.g. Retirement Alpha",
-  "optimistic": <integer in lakhs e.g. 42>,
-  "expected": <integer in lakhs e.g. 28>,
-  "projectionReasoning": "2-3 sentences explaining the numbers",
-  "growthVector": "one line growth description",
-  "drawdownGuard": "one line risk protection description",
-  "hedgeEfficiency": "one line hedge description",
+  "geminiSummary": "2-3 sentence personalized profile summary",
+  "projectionName": "creative name tailored to them e.g. Tech Exec Retirement Alpha",
+  "optimistic": <integer in lakhs based on their inputs e.g. 150>,
+  "expected": <integer in lakhs based on their inputs e.g. 110>,
+  "projectionReasoning": "2-3 sentences explaining the projection math specifically using their inputs (e.g., based on your 2L/month investment...)",
+  "growthVector": "one line personalized growth description",
+  "drawdownGuard": "one line personalized risk protection description",
+  "hedgeEfficiency": "one line personalized hedge description",
   "recommendations": [
     {
       "product": "ET Prime",

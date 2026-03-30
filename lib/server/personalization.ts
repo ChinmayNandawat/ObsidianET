@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Groq } from 'groq-sdk';
 import {
   DEFAULT_HUB_ITEMS,
   DEFAULT_RECOMMENDATIONS,
@@ -20,71 +20,80 @@ export async function personalizeSession(session: PersonalizationPayload, userIn
   const messages = [...session.messages, userMessage];
   let isJustFinished = false;
 
-  const apiKey = process.env.GEMINI_API_KEY?.replace(/"/g, '');
+  const apiKey = process.env.GROQ_API_KEY?.replace(/"/g, '').trim();
   if (!apiKey) {
-    throw new Error("Missing GEMINI_API_KEY");
+    throw new Error("Missing GROQ_API_KEY. Please add GROQ_API_KEY to your .env file.");
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash-preview-04-17',
-    generationConfig: { responseMimeType: 'application/json' }
-  });
+  const groq = new Groq({ apiKey });
 
   const conversationString = messages.map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n');
 
   let assistantReply = "";
   let updatedSession = { ...session, messages };
 
-  if (!session.profilingComplete) {
-    const profilingPrompt = `
-You are the ET AI Concierge for The Economic Times ecosystem.
-Your goal is to guide the user through a short onboarding process consisting of exactly 10 questions.
-We need to figure out their financial profile.
+  // Safety constraint: If we hit 10 questions, force completion
+  if (updatedSession.answeredQuestions >= 10 && !updatedSession.profilingComplete) {
+    updatedSession.profilingComplete = true;
+    isJustFinished = true;
+  }
 
-Here is the list of target questions to ask recursively:
-${PROFILING_QUESTIONS.map((q, i) => `${i + 1}. ${q.prompt}`).join('\n')}
+  if (!updatedSession.profilingComplete) {
+    const currentQIndex = updatedSession.answeredQuestions;
+    const currentQuestion = PROFILING_QUESTIONS[currentQIndex];
+    
+    // Explicitly handle the logic for the final question
+    const isLastQuestion = currentQIndex === PROFILING_QUESTIONS.length - 1;
 
-The user has answered ${session.answeredQuestions} questions so far.
+    const profilingPrompt = `You are the ET AI Concierge. A user is answering 10 specific onboarding questions.
+Current Question (Question ${currentQIndex + 1} of 10): "${currentQuestion.prompt}"
 
-Conversation History:
-${conversationString.replace(/`/g, "'")}
+User's Latest Message: "${userInput}"
 
-INSTRUCTIONS:
-1. Look at the user's latest response.
-2. If they make small talk or ask a side question, answer it briefly, AND THEN ask the NEXT pending question from the list.
-3. If they answered the question adequately, increment the answered question count in your head and ask the NEXT question on the list.
-4. Keep your responses short, professional, conversational, and direct.
+Your task:
+1. Determine if the user has adequately answered the current question. Small talk is allowed but doesn't count as an answer unless it contains the info.
+2. If yes: Increment the answered count to ${currentQIndex + 1}. ${isLastQuestion ? "This is the final question, so just acknowledge their answer and say we are setting up their dashboard." : "Pick the NEXT question from the list below. Acknowledge their answer briefly and ask the next question."}
+3. If no: Keep the answered count at ${currentQIndex}. Briefly handle their small talk, then politely re-ask the current question.
 
-OUTPUT (JSON MATCHING SCHEMA):
-{
-  "assistantReply": "Your response to them and the next question text.",
-  "newAnsweredCount": <number>, 
-  "isProfilingComplete": <boolean>
-}
-**Ensure isProfilingComplete is true ONLY if newAnsweredCount is 10 or more**
-`;
+Question List:
+${PROFILING_QUESTIONS.map((q, i) => `${i + 1}. ${q.prompt}`).join('\n')}        
+
+Constraints:
+- \`newAnsweredCount\` MUST be exactly ${currentQIndex + 1} if they answered the question, or ${currentQIndex} if they didn't.
+- \`isProfilingComplete\` MUST be true ONLY if \`newAnsweredCount\` equals 10.
+
+You must reply in valid JSON format. Return ONLY a JSON object matching this schema exactly:
+{"assistantReply": "string", "newAnsweredCount": number, "isProfilingComplete": boolean}`;
 
     try {
-      const result = await model.generateContent(profilingPrompt);
-      const data = JSON.parse(result.response.text());
+      const completion = await groq.chat.completions.create({
+        messages: [{ role: "user", content: profilingPrompt }],
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.2,
+        response_format: { type: "json_object" }
+      });
       
-      assistantReply = data.assistantReply;
-      updatedSession.answeredQuestions = data.newAnsweredCount;
+      const responseText = completion.choices[0]?.message?.content || '{}';
+      const data = JSON.parse(responseText);
       
-      if (data.isProfilingComplete) {
+      assistantReply = data.assistantReply || "Got it. Let's move to the next question.";
+      
+      // Clamp the count to exactly current + 1 or stay the same
+      if (typeof data.newAnsweredCount === 'number') {
+        updatedSession.answeredQuestions = Math.min(Math.max(data.newAnsweredCount, currentQIndex), currentQIndex + 1);
+      }
+      
+      if (data.isProfilingComplete || updatedSession.answeredQuestions >= 10) {
         updatedSession.profilingComplete = true;
-        isJustFinished = true; // Trigger the dashboard generation in stage 2
+        isJustFinished = true;
       }
     } catch (err: any) {
-      console.error("Gemini Profiling Error:", err.message);
-      assistantReply = "I'm having a slight connection hiccup right now. Could you repeat that?";
+      console.error("Groq Profiling Error:", err.message);
+      assistantReply = "I'm having a slight connection hiccup right now. Let me try that again.";
     }
 
   } else {
     // Stage 3: General Chat Post-Profiling
-    // In this branch, Gemini answers general queries contextually as the ET AI Concierge
-    const chatModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const postProfilingPrompt = `
 You are the ET AI Concierge for The Economic Times ecosystem. The user has already finished their onboarding.
 Their profile summary: ${updatedSession.profile?.summary || 'User is looking for ET insights.'}
@@ -94,95 +103,87 @@ Risk Level: ${updatedSession.profile?.riskLabel || 'Balanced'}
 Conversation History:
 ${conversationString.replace(/`/g, "'")}
 
-Respond strictly in plain text / conversational format to their latest message. You can recommend ET topics, talk about macro, or adjust their profile via conversation. Keep your responses crisp, direct, and under 4-5 sentences.
+Respond strictly in plain text / conversational format to their latest message. Keep your responses crisp, direct, and under 4-5 sentences.
 `;
     try {
-      const result = await chatModel.generateContent(postProfilingPrompt);
-      assistantReply = result.response.text().trim();
+      const completion = await groq.chat.completions.create({
+        messages: [
+          { role: "system", content: postProfilingPrompt },
+          { role: "user", content: userInput }
+        ],
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.7,
+      });
+      assistantReply = completion.choices[0]?.message?.content || "Could you clarify that?";
     } catch (err: any) {
-      console.error("Gemini Chat Error:", err.message);
-      if (err.message.includes("429 Too Many Requests") || err.message.includes("Quota")) {
-        assistantReply = "I'm hitting a quick rate limit with Gemini right now because of the free tier. Please wait about 60 seconds and try again!";
-      } else {
-        assistantReply = "I'm experiencing a quick interruption; could you rephrase that?";
-      }
+      console.error("Groq Chat Error:", err.message);
+      assistantReply = "I'm experiencing some interference. Could you say that again?";
     }
   }
 
   // Generate Profile & Recommendations Dashboard
-  // This triggers right after they answer the 10th question OR if it was already complete but we haven't generated the real recommendations yet
   if (isJustFinished || (session.profilingComplete && session.recommendations.length > 0 && session.recommendations[0].id === 'rec-prime')) {
     console.log("Profiling complete! Generating recommendations dashboard...");
-    
-    const synthesisPrompt = `
-You are the ET AI Concierge expert data generator.
-The user has just finished answering their 10 onboarding financial questions.
 
-Conversation History:
+    const synthesisPrompt = `You are the ET AI Concierge expert data generator. Based on the conversation, generate a profile and recommendations.
+Conversation:
 ${conversationString.replace(/`/g, "'")}
 
-Based ON THEIR ANSWERS, generate a fully personalized user profile, and exactly 3 hyper-targeted "recommendations" for ET (Economic Times) products/features.
+CRITICAL LINK INSTRUCTIONS: Use only these links:
+- https://economictimes.indiatimes.com/prime
+- https://economictimes.indiatimes.com/markets
+- https://economictimes.indiatimes.com/wealth
+- https://economictimes.indiatimes.com/tech
 
-CRITICAL LINK INSTRUCTIONS:
-Do NOT hallucinate links. You MUST map your recommendation to one of these exact, verified ET links ONLY:
-- https://economictimes.indiatimes.com/prime (For Premium deep analysis, macro)
-- https://economictimes.indiatimes.com/markets (For Live stock data, screener, signals)
-- https://economictimes.indiatimes.com/wealth (For Personal finance, mutual funds, taxes)
-- https://economictimes.indiatimes.com/tech (For Startup and technology news)
-- https://economictimes.indiatimes.com/mf (For strictly Mutual Funds)
-- https://economictimes.indiatimes.com/markets/options (For Options/Derivatives traders)
-
-YOU MUST RETURN JSON MATCHING THIS EXACT SCHEMA:
+RETURN ONLY JSON:
 {
-  "assistantReply": "A welcome aboard message mentioning their dashboard is ready. Answer any final trailing thoughts they just had.",
+  "assistantReply": "Welcome aboard. Your dashboard is ready.",
   "profile": {
-    "name": "Extract their name or use Operator",
-    "persona": "e.g. Emerging Alpha Seeker",
-    "summary": "2 sentence summary of their goals and risk profile.",
-    "riskTolerance": "low" | "medium" | "high",
-    "riskLabel": "Cautious" | "Balanced" | "Aggressive",
-    "experienceLevel": "e.g. Intermediate",
-    "interests": ["ET Markets", "AI", "Macro"],
-    "primaryGoal": "e.g. Wealth Creation",
-    "investmentHorizon": "e.g. 5+ years",
+    "name": "Name or Operator",
+    "persona": "e.g. Alpha Seeker",
+    "summary": "2 sentence summary.",
+    "riskTolerance": "medium",
+    "riskLabel": "Balanced",
+    "experienceLevel": "Intermediate",
+    "interests": ["ET Markets"],
+    "primaryGoal": "Wealth",
+    "investmentHorizon": "5+ years",
     "financialIQ": 75,
     "profileCompletion": 100,
     "coreId": "OX-USER-1",
-    "insights": [
-      { "label": "Risk appetite", "value": "Balanced", "score": 60 },
-      { "label": "Experience", "value": "Intermediate", "score": 70 },
-      { "label": "Goal clarity", "value": "High", "score": 85 }
-    ]
+    "insights": [{"label": "Risk appetite", "value": "Balanced", "score": 60}]
   },
   "recommendations": [
     {
-      "title": "ET Prime Daily Playbook",
-      "description": "Specific daily insights matched to their answers.",
+      "title": "ET Prime Daily",
+      "description": "Specific daily insights.",
       "confidence": 0.95,
-      "reasoning": "You mentioned wanting macro analysis.",
-      "ctaLabel": "Open ET Prime",
+      "reasoning": "You mentioned macro.",
+      "ctaLabel": "Open ET",
       "link": "https://economictimes.indiatimes.com/prime",
       "source": "ET Prime",
-      "tags": ["Premium", "Macro"]
+      "tags": ["Premium"]
     }
   ]
-}
-Return EXACTLY 4 recommendations of array items.
-`;
+}`;
+    
     try {
-      const gModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { responseMimeType: 'application/json' }});
-      const result = await gModel.generateContent(synthesisPrompt);
-      const data = JSON.parse(result.response.text());
+      const completion = await groq.chat.completions.create({
+        messages: [{ role: "user", content: synthesisPrompt }],
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.2,
+        response_format: { type: "json_object" }
+      });
       
+      const data = JSON.parse(completion.choices[0]?.message?.content || '{}');
       updatedSession.profile = { ...data.profile, lastActive: new Date().toISOString() };
-      updatedSession.recommendations = data.recommendations.map((r: any, i: number) => ({ ...r, id: `gemini-rec-${i}` }));
-      
+      updatedSession.recommendations = data.recommendations.map((r: any, i: number) => ({ ...r, id: `groq-rec-${i}` }));
+
       if (isJustFinished) {
         assistantReply = data.assistantReply || "Your profile is fully calibrated! The ET Ecosystem dashboard is ready on your right.";
       }
-
     } catch (err: any) {
-      console.error("Gemini Synthesis Error:", err.message);
+      console.error("Groq Synthesis Error:", err.message);
     }
   }
 

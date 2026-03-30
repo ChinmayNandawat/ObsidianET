@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-preview-04-17' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
     
     const fullPrompt = SIMULATION_CHATBOT_PROMPT
       .replace('{profile}', JSON.stringify(session.profile, null, 2))

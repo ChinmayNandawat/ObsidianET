@@ -60,7 +60,8 @@ export function loadProfile(): ProfileData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return { ...defaultProfile }
-    return { ...defaultProfile, ...JSON.parse(raw) }
+    const parsed = JSON.parse(raw);
+    return { ...defaultProfile, ...parsed, recommendations: parsed.recommendations || [] }
   } catch {
     return { ...defaultProfile }
   }
